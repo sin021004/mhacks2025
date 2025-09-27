@@ -100,33 +100,50 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error stopping camera:', error);
         }
     }
-
     // --- BUTTON HANDLERS WITH CAMERA CONTROL INTEGRATION ---
 
-    // START Button Handler
     startBtn.addEventListener('click', async () => {
         if (isRunning) return;
-
-        // 1. Initialize camera/backend detection
+    
+        const calibrationOverlay = document.getElementById('calibration-overlay');
+        const countdownEl = document.getElementById('calibration-countdown');
+    
+        // Show overlay
+        calibrationOverlay.classList.remove('hidden');
+    
+        let countdown = 3;
+        countdownEl.textContent = countdown;
+    
+        // Start live video feed immediately
         const cameraStarted = await initializeCamera();
-        if (!cameraStarted) {
-            return; // Don't start the timer if camera failed to start
-        }
-
-        isRunning = true;
-
-        // 2. Start the live video feed (this should happen after backend is ready)
+        if (!cameraStarted) return;
         videoFeed.src = '/video_feed';
-        
-        // 3. Update buttons and UI
-        startBtn.disabled = true;
-        pauseBtn.disabled = false;
-        endBtn.disabled = false;
-        analysisSection.classList.add('hidden');
-
-        // 4. Start the main timer (updates every second with real posture data)
-        totalTimer = setInterval(updateTimers, 1000);
+    
+        // Countdown every second
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            countdownEl.textContent = countdown;
+            if (countdown <= 0) clearInterval(countdownInterval);
+        }, 1000);
+    
+        // After 3 seconds, hide overlay, grab frame, start session
+        setTimeout(async () => {
+            calibrationOverlay.classList.add('hidden');
+    
+            // Grab a frame for calibration
+            await fetch('/calibrate', { method: 'POST' });
+    
+            // Start session timers
+            isRunning = true;
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            endBtn.disabled = false;
+            analysisSection.classList.add('hidden');
+    
+            totalTimer = setInterval(updateTimers, 1000);
+        }, 3000);
     });
+     
 
     // PAUSE Button Handler (modified to use the prettier resume/pause logic)
     pauseBtn.addEventListener('click', () => {
@@ -214,3 +231,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Closes the existing session and starts new session
+function closeAnalysis() {
+    const analysisSection = document.getElementById('analysis-section');
+    analysisSection.classList.add('hidden');
+
+    // Reset session variables and UI
+    totalSeconds = 0;
+    goodPostureSeconds = 0;
+    totalTimeDisplay.textContent = '00:00:00';
+    goodTimeDisplay.textContent = '00:00:00';
+    reminderBox.className = 'reminder';
+    reminderBox.innerHTML = 'Current Status: <strong>Ready to Start</strong>';
+
+    // Reset buttons
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = 'PAUSE';
+    endBtn.disabled = true;
+
+    // Reset video feed
+    videoFeed.src = placeholderSrc;
+}

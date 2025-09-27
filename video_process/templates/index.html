@@ -48,13 +48,18 @@
             <!-- Video Feed -->
             <div class="video-container">
                 <div class="video-frame">
-                    <img id="video-feed" src="{{ url_for('static', filename='img/placeholder.jpeg') }}" alt="Posture Camera Feed">
-                    <div class="video-overlay">
-                        <div class="recording-indicator">
-                            <div class="recording-dot"></div>
-                            <span>Monitoring</span>
+                    <img id="video-feed" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Video Feed">
+                        <div class="video-overlay">
+                            <div class="recording-indicator">
+                                <div class="recording-dot"></div>
+                                <span>Monitoring</span>
+                            </div>
                         </div>
-                    </div>
+                </div>
+                <!-- Calibration Countdown Overlay -->
+                <div id="calibration-overlay" class="calibration-overlay hidden">
+                    <p>🪑 Sit in Good Posture!</p>
+                    <span id="calibration-countdown">3</span>
                 </div>
             </div>
 
@@ -136,6 +141,19 @@
                         <span class="stat-label">Score Today</span>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calibration Modal -->
+    <div id="calibration-section" class="analysis-modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🪑 Sit in Good Posture!</h2>
+            </div>
+            <div class="analysis-content">
+                <p>Please sit upright. The system will calibrate in <span id="calibration-countdown">3</span> seconds...</p>
             </div>
         </div>
     </div>
