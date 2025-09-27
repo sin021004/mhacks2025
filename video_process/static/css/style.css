@@ -1,0 +1,162 @@
+/* Using a soft, aesthetic color palette (e.g., pastels, light blues/pinks) */
+:root {
+    --primary-color: #A8DADC; /* Light Blue/Cyan */
+    --secondary-color: #457B9D; /* Muted Blue */
+    --accent-color: #F4A261; /* Soft Orange */
+    --success-color: #2A9D8F; /* Teal */
+    --danger-color: #E76F51; /* Coral */
+    --text-color: #264653; /* Dark Navy */
+    --bg-color: #F1FAEE; /* Very Light Cream/White */
+}
+
+body {
+    font-family: 'Arial', sans-serif; /* Use a modern, clean font */
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    display: flex;
+    max-width: 1200px;
+    width: 100%;
+    gap: 30px;
+}
+
+/* --- Video Section Styling --- */
+.video-section {
+    flex: 2; /* Takes up more space */
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+    color: var(--secondary-color);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#video-feed {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.reminder {
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1em;
+    transition: background-color 0.3s;
+}
+
+.good-posture {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.bad-posture {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* --- Control Panel Styling --- */
+.control-panel {
+    flex: 1; /* Takes less space */
+    background: var(--primary-color);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.timer-display {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.timer-display p {
+    margin: 0 0 5px 0;
+    font-size: 0.9em;
+    color: var(--secondary-color);
+}
+
+.timer-display span {
+    font-size: 2em;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.good-time span {
+    color: var(--success-color);
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.cute-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 25px; /* Fully rounded buttons */
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.cute-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cute-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    color: #666;
+}
+
+.start { background-color: var(--success-color); color: white; }
+.pause { background-color: var(--accent-color); color: white; }
+.end   { background-color: var(--danger-color); color: white; }
+
+/* --- Analysis Section Styling --- */
+.analysis-box {
+    grid-column: 1 / 3; /* Spans across the entire width */
+    background: var(--bg-color);
+    padding: 25px;
+    border-radius: 15px;
+    margin-top: 30px;
+    border: 2px solid var(--secondary-color);
+}
+
+.analysis-box h2 {
+    color: var(--secondary-color);
+    text-align: center;
+}
+
+.feedback-message {
+    margin-top: 15px;
+    font-size: 1.2em;
+    font-style: italic;
+    color: var(--success-color);
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}

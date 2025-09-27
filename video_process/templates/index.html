@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aesthetic Posture Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <div class="video-section">
+            <h1 class="title">✨ Your Pose Assistant ✨</h1>
+            <img id="video-feed" src="{{ url_for('static', filename='img/placeholder.jpeg') }}" alt="Static Video Placeholder">
+            <div id="reminder-box" class="reminder good-posture">
+                Current Status: **Perfect Posture!**
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <h2>Time Tracking</h2>
+            
+            <div class="timer-display">
+                <p>Total Session Time:</p>
+                <span id="total-time">00:00:00</span>
+            </div>
+
+            <div class="timer-display good-time">
+                <p>Good Posture Time:</p>
+                <span id="good-time">00:00:00</span>
+            </div>
+
+            <div class="button-group">
+                <button id="start-btn" class="cute-btn start">START</button>
+                <button id="pause-btn" class="cute-btn pause" disabled>PAUSE</button>
+                <button id="end-btn" class="cute-btn end" disabled>END & ANALYZE</button>
+            </div>
+        </div>
+
+        <div id="analysis-section" class="analysis-box hidden">
+            <h2>Session Analysis</h2>
+            <p>Total Session Time: <span id="final-total-time"></span></p>
+            <p>Good Posture Time: <span id="final-good-time"></span></p>
+            <p>Good Posture Percentage: <span id="posture-percentage"></span></p>
+            <p class="feedback-message">Keep up the great work!</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
