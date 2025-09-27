@@ -2,7 +2,7 @@ import uuid
 import threading
 from flask import Flask, render_template, Response, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
-from posture import PostureDetector # Make sure this is the threaded version
+from posture import PostureDetector
 
 # --- 1. SETUP ---
 app = Flask(__name__)
@@ -11,10 +11,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posture_data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+# A global dictionary to hold detector instances, mapped by user session ID
 detectors = {}
+# A lock to make the detectors dictionary thread-safe
 detector_lock = threading.Lock()
 
-# --- 2. DATABASE MODELS (Unchanged) ---
+# --- 2. DATABASE MODELS ---
 class UserSession(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     posture_events = db.relationship('PostureData', backref='user_session', lazy=True)
@@ -25,40 +27,42 @@ class PostureData(db.Model):
     timestamp = db.Column(db.DateTime, server_default=db.func.now())
     posture_status = db.Column(db.String(10), nullable=False)
     angle = db.Column(db.Float, nullable=False)
+    reason = db.Column(db.String(50), nullable=True) # <-- ADDED COLUMN
 
 # --- 3. FLASK ROUTES ---
 @app.route('/')
 def index():
+    """Home page. Creates a user session if one doesn't exist."""
     if 'user_id' not in session:
-        new_user = UserSession(); db.session.add(new_user); db.session.commit()
+        new_user = UserSession()
+        db.session.add(new_user)
+        db.session.commit()
         session['user_id'] = new_user.id
     return render_template('index.html')
 
 @app.route('/start_camera', methods=['POST'])
 def start_camera():
+    """Creates and starts a detector for the current user."""
     user_id = session.get('user_id')
-    if not user_id: return jsonify({"error": "No session found"}), 403
+    if not user_id:
+        return jsonify({"error": "No session found"}), 403
 
     with detector_lock:
         if user_id not in detectors:
             detectors[user_id] = PostureDetector(video_source=0)
-            # --- THIS IS THE FIX ---
-            # Start the background thread that processes video frames
             detectors[user_id].start_processing()
             print(f"Detector created and started for user {user_id}")
-        else:
-            print(f"Detector already exists for user {user_id}")
-            
     return jsonify({"status": "started"}), 200
 
 @app.route('/stop_camera', methods=['POST'])
 def stop_camera():
+    """Stops and removes the detector for the current user."""
     user_id = session.get('user_id')
-    if not user_id: return jsonify({"error": "No session found"}), 403
+    if not user_id:
+        return jsonify({"error": "No session found"}), 403
         
     with detector_lock:
         if user_id in detectors:
-            # Tell the thread to stop and clean up resources
             detectors[user_id].stop_processing()
             del detectors[user_id]
             print(f"Detector stopped for user {user_id}")
@@ -67,28 +71,46 @@ def stop_camera():
 
 @app.route('/video_feed')
 def video_feed():
+    """Video streaming for the current user."""
     user_id = session.get('user_id')
     if not user_id or user_id not in detectors:
         return "Detector not active for this session", 404
     
-    return Response(detectors[user_id].generate_frames(),
+    detector = detectors[user_id]
+    return Response(detector.generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/posture_status')
 def posture_status():
+    """Provides posture status and saves it to the database."""
     user_id = session.get('user_id')
-    if not user_id: return jsonify({"error": "No session found"}), 403
+    if not user_id:
+        return jsonify({"error": "No session found"}), 403
 
     if user_id in detectors:
-        data = detectors[user_id].get_current_data()
-        if data['posture'] != "Unknown":
-            new_posture_event = PostureData(session_id=user_id, posture_status=data['posture'], angle=data['angle'])
-            db.session.add(new_posture_event); db.session.commit()
+        detector = detectors[user_id]
+        data = detector.get_current_data()
+
+        # Save to database if posture is good or bad
+        if data['posture'] in ["GOOD", "BAD"]:
+            bad_posture_reason = None
+            if data['posture'] == "BAD":
+                bad_posture_reason = data.get('reason')
+
+            new_posture_event = PostureData(
+                session_id=user_id,
+                posture_status=data['posture'],
+                angle=0, # Angle is no longer the primary metric
+                reason=bad_posture_reason
+            )
+            db.session.add(new_posture_event)
+            db.session.commit()
+
         return jsonify(data)
     else:
         return jsonify({"posture": "NOT_ACTIVE"})
 
-# --- 4. RUN THE APP (Unchanged) ---
+# --- 4. RUN THE APP ---
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
