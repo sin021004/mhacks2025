@@ -1,8 +1,6 @@
-// static/js/script.js
-
 document.addEventListener('DOMContentLoaded', () => {
     // Get all necessary DOM elements
-    const videoFeed = document.getElementById('video-feed'); // --- MODIFICATION ---
+    const videoFeed = document.getElementById('video-feed');
     const totalTimeDisplay = document.getElementById('total-time');
     const goodTimeDisplay = document.getElementById('good-time');
     const reminderBox = document.getElementById('reminder-box');
@@ -11,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const endBtn = document.getElementById('end-btn');
     const analysisSection = document.getElementById('analysis-section');
 
-    // --- MODIFICATION ---
     // Store the initial placeholder image source to revert back to it later
     const placeholderSrc = videoFeed.src;
 
@@ -29,12 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${h}:${m}:${s}`;
     }
 
-    // --- MODIFICATION ---
-    // New function to get the real posture status from the Flask backend
+    // --- NEW FUNCTIONS FOR CAMERA/BACKEND CONTROL ---
+
+    // Function to get the real posture status from the Flask backend
     async function fetchAndUpdatePostureStatus() {
         try {
             const response = await fetch('/posture_status');
-            if (!response.ok) return false; // Handle cases where the server is down
+            if (!response.ok) return false;
 
             const data = await response.json();
             const isGoodPosture = data.posture === 'GOOD';
@@ -51,17 +49,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Error fetching posture status:", error);
-            return false; // Assume bad posture if there's an error
+            // Fallback UI for connection errors
+            reminderBox.className = 'reminder bad-posture';
+            reminderBox.innerHTML = 'Current Status: <strong>Detection Offline</strong>';
+            return false;
         }
     }
 
-    // Function to update the main timers
+    // Function to update the main timers using REAL posture detection
     async function updateTimers() {
         totalSeconds++;
         totalTimeDisplay.textContent = formatTime(totalSeconds);
 
-        // --- REPLACEMENT ---
-        // Replace the MOCK DATA block with our new async function call
         const isGoodPosture = await fetchAndUpdatePostureStatus();
 
         if (isGoodPosture) {
@@ -70,51 +69,103 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // START Button Handler
-    startBtn.addEventListener('click', () => {
-        if (isRunning) return;
-        isRunning = true;
-        
-        // --- MODIFICATION ---
-        // Start the live video feed!
-        videoFeed.src = '/video_feed';
+    // Function to start the camera and posture detection via the backend endpoint
+    async function initializeCamera() {
+        try {
+            reminderBox.innerHTML = 'Current Status: <strong>Starting camera...</strong>';
+            const response = await fetch('/start_camera', { method: 'POST' });
+            if (!response.ok) {
+                throw new Error('Failed to start camera via backend');
+            }
+            console.log('Camera and posture detection started successfully');
+            return true;
+        } catch (error) {
+            console.error('Error starting camera:', error);
+            alert('Unable to start camera. Check your backend server and camera permissions.');
+            reminderBox.className = 'reminder bad-posture';
+            reminderBox.innerHTML = 'Current Status: <strong>Camera Failed to Start</strong>';
+            return false;
+        }
+    }
 
+    // Function to stop the camera and posture detection via the backend endpoint
+    async function stopCamera() {
+        try {
+            const response = await fetch('/stop_camera', { method: 'POST' });
+            if (!response.ok) {
+                throw new Error('Failed to stop camera via backend');
+            }
+            console.log('Camera stopped successfully');
+        } catch (error) {
+            console.error('Error stopping camera:', error);
+        }
+    }
+
+    // --- BUTTON HANDLERS WITH CAMERA CONTROL INTEGRATION ---
+
+    // START Button Handler
+    startBtn.addEventListener('click', async () => {
+        if (isRunning) return;
+
+        // 1. Initialize camera/backend detection
+        const cameraStarted = await initializeCamera();
+        if (!cameraStarted) {
+            return; // Don't start the timer if camera failed to start
+        }
+
+        isRunning = true;
+
+        // 2. Start the live video feed (this should happen after backend is ready)
+        videoFeed.src = '/video_feed';
+        
+        // 3. Update buttons and UI
         startBtn.disabled = true;
         pauseBtn.disabled = false;
         endBtn.disabled = false;
         analysisSection.classList.add('hidden');
 
+        // 4. Start the main timer (updates every second with real posture data)
         totalTimer = setInterval(updateTimers, 1000);
     });
 
-    // PAUSE Button Handler (your logic is great, no changes needed)
+    // PAUSE Button Handler (modified to use the prettier resume/pause logic)
     pauseBtn.addEventListener('click', () => {
-        // This button now toggles between Pause and Resume
         if (isRunning) {
+            // PAUSE LOGIC
             isRunning = false;
             clearInterval(totalTimer);
             pauseBtn.textContent = 'RESUME';
+            // Optional: You might want to call a /pause_detection endpoint here
+            reminderBox.className = 'reminder good-posture';
+            reminderBox.innerHTML = 'Current Status: <strong>Session Paused</strong>';
         } else {
+            // RESUME LOGIC
             isRunning = true;
             totalTimer = setInterval(updateTimers, 1000);
             pauseBtn.textContent = 'PAUSE';
+            // The next updateTimers call will refresh the reminderBox status
         }
     });
 
     // END Button Handler
-    endBtn.addEventListener('click', () => {
+    endBtn.addEventListener('click', async () => {
+        // 1. Stop all timers
         clearInterval(totalTimer);
         isRunning = false;
+        
+        // 2. Stop the camera/backend detection
+        await stopCamera();
 
-        // --- MODIFICATION ---
-        // Revert the video feed to the static placeholder image
+        // 3. Revert the video feed to the static placeholder image
         videoFeed.src = placeholderSrc;
         
+        // 4. Reset buttons and UI
         startBtn.disabled = false;
         pauseBtn.disabled = true;
         endBtn.disabled = true;
         pauseBtn.textContent = 'PAUSE'; // Reset pause button text
         
+        // 5. Calculate and display analysis
         const goodPercentage = totalSeconds > 0 
             ? ((goodPostureSeconds / totalSeconds) * 100).toFixed(1) 
             : 0;
@@ -127,19 +178,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const feedbackMessage = document.querySelector('.feedback-message');
         if (goodPercentage >= 80) {
             feedbackMessage.textContent = "Excellent work! Your posture score is fantastic! 🎉";
+            feedbackMessage.style.color = 'var(--success-color)';
         } else if (goodPercentage >= 50) {
             feedbackMessage.textContent = "Good session! Keep trying to maintain your posture next time! 👍";
+            feedbackMessage.style.color = 'var(--accent-color)';
         } else {
             feedbackMessage.textContent = "Needs improvement. Let's focus on posture awareness next session. 😔";
+            feedbackMessage.style.color = 'var(--danger-color)';
         }
-        
+
         analysisSection.classList.remove('hidden');
 
+        // 6. Reset session variables
         totalSeconds = 0;
         goodPostureSeconds = 0;
         totalTimeDisplay.textContent = formatTime(0);
         goodTimeDisplay.textContent = formatTime(0);
         reminderBox.className = 'reminder';
-        reminderBox.innerHTML = 'Current Status: **Ready to Start**';
+        reminderBox.innerHTML = 'Current Status: <strong>Ready to Start</strong>';
+    });
+
+    // Optional: Initial status check on page load
+    window.addEventListener('load', async () => {
+        try {
+            const response = await fetch('/posture_status');
+            if (response.ok) {
+                reminderBox.innerHTML = 'Current Status: <strong>Backend Ready</strong>';
+            } else {
+                reminderBox.className = 'reminder bad-posture';
+                reminderBox.innerHTML = 'Current Status: <strong>Backend/Camera Disconnected</strong>';
+            }
+        } catch (error) {
+            reminderBox.className = 'reminder bad-posture';
+            reminderBox.innerHTML = 'Current Status: <strong>Backend Not Connected</strong>';
+        }
     });
 });
