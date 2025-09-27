@@ -1,25 +1,18 @@
-// static/js/script.js
+// Get all necessary DOM elements
+const totalTimeDisplay = document.getElementById('total-time');
+const goodTimeDisplay = document.getElementById('good-time');
+const reminderBox = document.getElementById('reminder-box');
+const startBtn = document.getElementById('start-btn');
+const pauseBtn = document.getElementById('pause-btn');
+const endBtn = document.getElementById('end-btn');
+const analysisSection = document.getElementById('analysis-section');
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Get all necessary DOM elements
-    const videoFeed = document.getElementById('video-feed'); // --- MODIFICATION ---
-    const totalTimeDisplay = document.getElementById('total-time');
-    const goodTimeDisplay = document.getElementById('good-time');
-    const reminderBox = document.getElementById('reminder-box');
-    const startBtn = document.getElementById('start-btn');
-    const pauseBtn = document.getElementById('pause-btn');
-    const endBtn = document.getElementById('end-btn');
-    const analysisSection = document.getElementById('analysis-section');
-
-    // --- MODIFICATION ---
-    // Store the initial placeholder image source to revert back to it later
-    const placeholderSrc = videoFeed.src;
-
-    // Timer variables
-    let totalSeconds = 0;
-    let goodPostureSeconds = 0;
-    let isRunning = false;
-    let totalTimer;
+// Timer variables
+let totalSeconds = 0;
+let goodPostureSeconds = 0;
+let isRunning = false;
+let totalTimer; // Interval for the main timer
+let postureUpdateInterval; // Interval for checking posture status
 
     // Helper function to format seconds into HH:MM:SS
     function formatTime(seconds) {
@@ -55,91 +48,104 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Function to update the main timers
-    async function updateTimers() {
-        totalSeconds++;
-        totalTimeDisplay.textContent = formatTime(totalSeconds);
+// Function to update the main timers
+function updateTimers() {
+    totalSeconds++;
+    totalTimeDisplay.textContent = formatTime(totalSeconds);
 
-        // --- REPLACEMENT ---
-        // Replace the MOCK DATA block with our new async function call
-        const isGoodPosture = await fetchAndUpdatePostureStatus();
+    // ----------------------------------------------------
+    // MOCK DATA SIMULATION LOGIC:
+    // **TEST CASE 1: Simulate random good posture ~70% of the time**
+    const isGoodPosture = Math.random() < 0.7; 
+    
+    // **TEST CASE 2: Simulate 5 seconds good, 5 seconds bad (for predictability)**
+    // const isGoodPosture = (totalSeconds % 10) < 5; 
+    // ----------------------------------------------------
 
-        if (isGoodPosture) {
-            goodPostureSeconds++;
-            goodTimeDisplay.textContent = formatTime(goodPostureSeconds);
-        }
+    if (isGoodPosture) {
+        goodPostureSeconds++;
+        goodTimeDisplay.textContent = formatTime(goodPostureSeconds);
+        
+        // Update the Reminder Box for GOOD POSTURE
+        reminderBox.className = 'reminder good-posture';
+        reminderBox.innerHTML = 'Current Status: **Perfect Posture!**';
+    } else {
+        // Update the Reminder Box for BAD POSTURE
+        reminderBox.className = 'reminder bad-posture';
+        reminderBox.innerHTML = 'Current Status: **Slouching! Adjust your back!**';
     }
+}
 
-    // START Button Handler
-    startBtn.addEventListener('click', () => {
-        if (isRunning) return;
-        isRunning = true;
-        
-        // --- MODIFICATION ---
-        // Start the live video feed!
-        videoFeed.src = '/video_feed';
+// START Button Handler
+startBtn.addEventListener('click', () => {
+    if (isRunning) return;
 
-        startBtn.disabled = true;
-        pauseBtn.disabled = false;
-        endBtn.disabled = false;
-        analysisSection.classList.add('hidden');
+    isRunning = true;
+    
+    // Enable/Disable buttons
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    endBtn.disabled = false;
+    analysisSection.classList.add('hidden'); // Hide analysis on start
 
-        totalTimer = setInterval(updateTimers, 1000);
-    });
+    // Start the main timer (updates every second)
+    totalTimer = setInterval(updateTimers, 1000);
+});
 
-    // PAUSE Button Handler (your logic is great, no changes needed)
-    pauseBtn.addEventListener('click', () => {
-        // This button now toggles between Pause and Resume
-        if (isRunning) {
-            isRunning = false;
-            clearInterval(totalTimer);
-            pauseBtn.textContent = 'RESUME';
-        } else {
-            isRunning = true;
-            totalTimer = setInterval(updateTimers, 1000);
-            pauseBtn.textContent = 'PAUSE';
-        }
-    });
+// PAUSE Button Handler
+pauseBtn.addEventListener('click', () => {
+    if (!isRunning) return;
+    
+    isRunning = false;
 
-    // END Button Handler
-    endBtn.addEventListener('click', () => {
-        clearInterval(totalTimer);
-        isRunning = false;
+    // Enable/Disable buttons
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
 
-        // --- MODIFICATION ---
-        // Revert the video feed to the static placeholder image
-        videoFeed.src = placeholderSrc;
-        
-        startBtn.disabled = false;
-        pauseBtn.disabled = true;
-        endBtn.disabled = true;
-        pauseBtn.textContent = 'PAUSE'; // Reset pause button text
-        
-        const goodPercentage = totalSeconds > 0 
-            ? ((goodPostureSeconds / totalSeconds) * 100).toFixed(1) 
-            : 0;
+    // Pause the timers
+    clearInterval(totalTimer);
+});
 
-        document.getElementById('final-total-time').textContent = formatTime(totalSeconds);
-        document.getElementById('final-good-time').textContent = formatTime(goodPostureSeconds);
-        document.getElementById('posture-percentage').textContent = `${goodPercentage}%`;
+// END Button Handler
+endBtn.addEventListener('click', () => {
+    // Stop all timers
+    clearInterval(totalTimer);
+    isRunning = false;
+    
+    // Reset buttons
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    endBtn.disabled = true;
+    
+    // Calculate and display analysis
+    const goodPercentage = totalSeconds > 0 
+        ? ((goodPostureSeconds / totalSeconds) * 100).toFixed(1) 
+        : 0;
 
-        // ... (your excellent feedback message logic) ...
-        const feedbackMessage = document.querySelector('.feedback-message');
-        if (goodPercentage >= 80) {
-            feedbackMessage.textContent = "Excellent work! Your posture score is fantastic! 🎉";
-        } else if (goodPercentage >= 50) {
-            feedbackMessage.textContent = "Good session! Keep trying to maintain your posture next time! 👍";
-        } else {
-            feedbackMessage.textContent = "Needs improvement. Let's focus on posture awareness next session. 😔";
-        }
-        
-        analysisSection.classList.remove('hidden');
+    document.getElementById('final-total-time').textContent = formatTime(totalSeconds);
+    document.getElementById('final-good-time').textContent = formatTime(goodPostureSeconds);
+    document.getElementById('posture-percentage').textContent = `${goodPercentage}%`;
 
-        totalSeconds = 0;
-        goodPostureSeconds = 0;
-        totalTimeDisplay.textContent = formatTime(0);
-        goodTimeDisplay.textContent = formatTime(0);
-        reminderBox.className = 'reminder';
-        reminderBox.innerHTML = 'Current Status: **Ready to Start**';
-    });
+    const feedbackMessage = document.querySelector('.feedback-message');
+    if (goodPercentage >= 80) {
+        feedbackMessage.textContent = "Excellent work! Your posture score is fantastic! 🎉";
+        feedbackMessage.style.color = 'var(--success-color)';
+    } else if (goodPercentage >= 50) {
+        feedbackMessage.textContent = "Good session! Keep trying to maintain your posture next time! 👍";
+        feedbackMessage.style.color = 'var(--accent-color)';
+    } else {
+        feedbackMessage.textContent = "Needs improvement. Let's focus on posture awareness next session. 😔";
+        feedbackMessage.style.color = 'var(--danger-color)';
+    }
+    
+    // Show analysis
+    analysisSection.classList.remove('hidden');
+
+    // **Optional: Reset for a new session**
+    totalSeconds = 0;
+    goodPostureSeconds = 0;
+    totalTimeDisplay.textContent = formatTime(0);
+    goodTimeDisplay.textContent = formatTime(0);
+    reminderBox.className = 'reminder good-posture';
+    reminderBox.innerHTML = 'Current Status: **Ready to Start**';
 });
