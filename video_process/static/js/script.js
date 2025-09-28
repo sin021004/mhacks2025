@@ -197,9 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     });
      
-
-    // PAUSE Button Handler (modified to use the prettier resume/pause logic)
-    // PAUSE Button Handler (modified to use the prettier resume/pause logic)
     pauseBtn.addEventListener('click', async () => { // **NOTE: Made function async**
         if (isRunning) {
             // PAUSE LOGIC
@@ -228,8 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
             isRunning = true;
             totalTimer = setInterval(updateTimers, 1000);
             pauseBtn.textContent = 'PAUSE';
-            
-            // The next updateTimers call will refresh the reminderBox status
         }
     });
 
@@ -249,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startBtn.disabled = false;
         pauseBtn.disabled = true;
         endBtn.disabled = true;
-        pauseBtn.textContent = 'PAUSE'; // Reset pause button text
+        pauseBtn.textContent = 'PAUSE'; 
         
         // 5. Calculate and display analysis
         const goodPercentage = totalSeconds > 0 
@@ -280,10 +275,24 @@ document.addEventListener('DOMContentLoaded', () => {
             feedbackMessage.style.color = 'var(--danger-color)';
         }
 
-        // --- CHART FIX: Make modal visible BEFORE initializing charts ---
         analysisSection.classList.remove('hidden');
 
-        // --- NEW: Initialize Charts HERE ---
+        // Include AI feedback
+        const aiFeedbackEl = document.getElementById('ai-feedback');
+        try {
+            const response = await fetch('/get_analysis_text'); 
+            
+            if (response.ok) {
+                const feedbackText = await response.text();
+                aiFeedbackEl.textContent = feedbackText.trim();
+            } else {
+                aiFeedbackEl.textContent = "Could not load AI feedback (Server Error).";
+                console.error('Failed to fetch analysis text:', response.status);
+            }
+        } catch (error) {
+            aiFeedbackEl.textContent = "Could not load AI feedback (Network Error).";
+            console.error('Network error fetching analysis text:', error);
+        }
         
         // PIE CHART: Posture Breakdown
         const breakdownCtx = document.getElementById('posture-breakdown-chart').getContext('2d');
@@ -325,10 +334,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     y: { min: 0, max: 100, title: { display: true, text: 'Percentage (%)' } },
                     x: { title: { display: true, text: 'Time (s)' } }
                 },
-                maintainAspectRatio: false // Important for modals
+                maintainAspectRatio: false
             }
         });
-        // --- END: Initialize Charts HERE ---
 
         // 6. Reset session variables
         totalSeconds = 0;

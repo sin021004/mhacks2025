@@ -1,6 +1,7 @@
+import os
 import uuid
 import threading
-from flask import Flask, render_template, Response, jsonify, session
+from flask import Flask, render_template, Response, jsonify, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from posture import PostureDetector
 
@@ -97,6 +98,21 @@ def posture_status():
         return jsonify(data)
     else:
         return jsonify({"posture": "NOT_ACTIVE"})
+
+@app.route('/get_analysis_text')
+def get_analysis_text():
+    # Flask's instance folder path
+    instance_path = app.instance_path 
+    filename = 'analyze.txt'
+    
+    # Check if the file exists
+    if not os.path.exists(os.path.join(instance_path, filename)):
+        # Return a friendly message if the file hasn't been created yet
+        return "No comprehensive AI analysis generated yet.", 404
+        
+    # Securely serves the content of the file
+    return send_from_directory(instance_path, filename, mimetype='text/plain')
+
 
 # --- 4. RUN THE APP ---
 if __name__ == '__main__':
