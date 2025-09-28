@@ -2,7 +2,9 @@ import uuid
 import threading
 from flask import Flask, render_template, Response, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from posture import PostureDetector
+from gemini import GeminiAnalyzer
 
 # --- 1. SETUP ---
 app = Flask(__name__)
@@ -13,6 +15,7 @@ db = SQLAlchemy(app)
 
 detectors = {}
 detector_lock = threading.Lock()
+gemini_input = ""
 
 # --- 2. DATABASE MODELS ---
 class UserSession(db.Model):
@@ -59,6 +62,31 @@ def stop_camera():
     with detector_lock:
         if user_id in detectors:
             detectors[user_id].stop_processing()
+            
+            good_bad_counts = (
+                db.session.query(PostureData.posture_status, func.count().label("total"))
+                .group_by(PostureData.posture_status)
+                .all()
+            )
+            
+            bad_reason_counts = (
+                db.session.query(PostureData.reason, func.count().label("total"))
+                .filter(PostureData.posture_status == "Bad")
+                .group_by(PostureData.reason)
+                .all()
+            )
+            
+            text = ", ".join(f"{status}: {count}" for status, count in good_bad_counts)
+            text2 = ", ".join(f"{reason}: {count}" for reason, count in bad_reason_counts)
+            text += "\nPosture Issues Breakdown: " + text2
+            
+            analyzer = GeminiAnalyzer()
+            gemini_output = analyzer.generate_report_from_data("Total Count: " + text + "; Chronological Raw Data: " + gemini_input)
+            
+            with open("instance/analyze.txt", "w") as f:
+                f.write(gemini_output)
+            
+            print(gemini_output)
             del detectors[user_id]
             print(f"Detector stopped for user {user_id}")
             
@@ -85,7 +113,13 @@ def posture_status():
         data = detector.get_current_data()
 
         if data['posture'] in ["GOOD", "BAD"]:
-            bad_posture_reason = data.get('reason') if data['posture'] == "BAD" else None
+            bad_posture_reason = None
+            gemini_input += "," + data['posture']
+            if data['posture'] == "BAD":   
+                bad_posture_reason = data.get('reason') 
+                gemini_input += "(" + bad_posture_reason + ")"
+            gemini_input += " "
+            
             new_posture_event = PostureData(
                 session_id=user_id,
                 posture_status=data['posture'],
@@ -103,4 +137,5 @@ if __name__ == '__main__':
     with app.app_context():
         db.drop_all()  
         db.create_all()
+        
     app.run(debug=True, threaded=True)
