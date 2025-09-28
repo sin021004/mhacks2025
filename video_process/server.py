@@ -17,6 +17,16 @@ db = SQLAlchemy(app)
 detectors = {}
 detector_lock = threading.Lock()
 gemini_input = ""
+import click
+
+@app.cli.command("init-db")
+@click.option("--drop", is_flag=True, help="Drop all tables before creating.")
+def init_db_command(drop: bool):
+    """Initialize database tables (optionally drop first)."""
+    if drop:
+        db.drop_all()
+    db.create_all()
+    click.echo("✅ Database initialized" + (" (dropped first)" if drop else ""))
 
 # --- 2. DATABASE MODELS ---
 class UserSession(db.Model):
@@ -82,6 +92,7 @@ def stop_camera():
             text += "\nPosture Issues Breakdown: " + text2
             
             analyzer = GeminiAnalyzer()
+            global gemini_input
             gemini_output = analyzer.generate_report_from_data("Total Count: " + text + "; Chronological Raw Data: " + gemini_input)
             
             with open("instance/analyze.txt", "w") as f:
@@ -108,7 +119,8 @@ def posture_status():
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({"error": "No session found"}), 403
-
+    
+    global gemini_input
     if user_id in detectors:
         detector = detectors[user_id]
         data = detector.get_current_data()
