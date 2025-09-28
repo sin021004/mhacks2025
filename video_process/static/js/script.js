@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pauseBtn = document.getElementById('pause-btn');
     const endBtn = document.getElementById('end-btn');
     const analysisSection = document.getElementById('analysis-section');
+    const generateSummaryBtn = document.getElementById('generate-summary-btn');
 
     // Store the initial placeholder image source to revert back to it later
     const placeholderSrc = videoFeed.src;
@@ -152,6 +153,44 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error fetching posture status:", err);
         }
     }
+
+    // Function to generate AI summary
+    async function fetchAISummary() {
+        const aiFeedbackEl = document.getElementById('ai-feedback');
+        aiFeedbackEl.textContent = "Processing session data and generating summary... this may take a moment. ⏳";
+        generateSummaryBtn.disabled = true;
+
+        try {
+            // 1. Trigger the backend to generate the summary
+            const generateResponse = await fetch('/generate_summary', { method: 'POST' });
+            if (!generateResponse.ok) {
+                throw new Error('Failed to trigger AI summary generation.');
+            }
+
+            // 2. Remove Button
+            generateSummaryBtn.style.display = 'none';
+            generateSummaryBtn.disabled = true; 
+            
+            // 3. Fetch the generated analysis text
+            const response = await fetch('/get_analysis_text'); 
+            
+            if (response.ok) {
+                const feedbackText = await response.text();
+                aiFeedbackEl.textContent = feedbackText.trim();
+            } else {
+                aiFeedbackEl.textContent = "AI Summary generation failed (Server Error).";
+                console.error('Failed to fetch analysis text:', response.status);
+            }
+        } catch (error) {
+            aiFeedbackEl.textContent = "AI Summary generation failed (Network Error).";
+            console.error('Error in AI summary process:', error);
+            // Reshow button when failed
+            generateSummaryBtn.style.display = 'block'; 
+            generateSummaryBtn.disabled = false;
+        } finally {
+            generateSummaryBtn.disabled = false;
+        }
+    }
        
     // --- BUTTON HANDLERS WITH CAMERA CONTROL INTEGRATION ---
 
@@ -228,6 +267,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // GENERATE SUMMARY button handler
+    generateSummaryBtn.addEventListener('click', fetchAISummary);
+
     // END Button Handler
     endBtn.addEventListener('click', async () => {
         // 1. Stop all timers
@@ -260,6 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // The CSS variable --percentage controls the conic-gradient fill.
             // We use the raw number (not with a '%' or 'deg' unit) here.
             statCircle.style.setProperty('--percentage', goodPercentage);
+        
+        // 6. Add back the generate summary button option
+        generateSummaryBtn.style.display = 'block'; 
+        document.getElementById('ai-feedback').textContent = "Summary not yet generated. Click the button above! 👆";
 }
 
         // ... (your excellent feedback message logic) ...
@@ -277,23 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         analysisSection.classList.remove('hidden');
 
-        // Include AI feedback
-        const aiFeedbackEl = document.getElementById('ai-feedback');
-        try {
-            const response = await fetch('/get_analysis_text'); 
-            
-            if (response.ok) {
-                const feedbackText = await response.text();
-                aiFeedbackEl.textContent = feedbackText.trim();
-            } else {
-                aiFeedbackEl.textContent = "Could not load AI feedback (Server Error).";
-                console.error('Failed to fetch analysis text:', response.status);
-            }
-        } catch (error) {
-            aiFeedbackEl.textContent = "Could not load AI feedback (Network Error).";
-            console.error('Network error fetching analysis text:', error);
-        }
-        
         // PIE CHART: Posture Breakdown
         const breakdownCtx = document.getElementById('posture-breakdown-chart').getContext('2d');
         

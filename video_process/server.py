@@ -76,32 +76,6 @@ def stop_camera():
     with detector_lock:
         if user_id in detectors:
             detectors[user_id].stop_processing()
-            
-            good_bad_counts = (
-                db.session.query(PostureData.posture_status, func.count().label("total"))
-                .group_by(PostureData.posture_status)
-                .all()
-            )
-            
-            bad_reason_counts = (
-                db.session.query(PostureData.reason, func.count().label("total"))
-                .filter(PostureData.posture_status == "Bad")
-                .group_by(PostureData.reason)
-                .all()
-            )
-            
-            text = ", ".join(f"{status}: {count}" for status, count in good_bad_counts)
-            text2 = ", ".join(f"{reason}: {count}" for reason, count in bad_reason_counts)
-            text += "\nPosture Issues Breakdown: " + text2
-            
-            analyzer = GeminiAnalyzer()
-            global gemini_input
-            gemini_output = analyzer.generate_report_from_data("Total Count: " + text + "; Chronological Raw Data: " + gemini_input)
-            
-            with open("instance/analyze.txt", "w") as f:
-                f.write(gemini_output)
-            
-            print(gemini_output)
             del detectors[user_id]
             print(f"Detector stopped for user {user_id}")
             
@@ -116,6 +90,48 @@ def video_feed():
     detector = detectors[user_id]
     return Response(detector.generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/generate_summary', methods=['POST'])
+def generate_summary():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "No session found"}), 403
+        
+    # Data aggregation logic (from old stop_camera)
+    good_bad_counts = (
+        db.session.query(PostureData.posture_status, func.count().label("total"))
+        .filter(PostureData.session_id == user_id) # **Important: filter by session_id**
+        .group_by(PostureData.posture_status)
+        .all()
+    )
+    
+    bad_reason_counts = (
+        db.session.query(PostureData.reason, func.count().label("total"))
+        .filter(PostureData.session_id == user_id) # **Important: filter by session_id**
+        .filter(PostureData.posture_status == "Bad")
+        .group_by(PostureData.reason)
+        .all()
+    )
+    
+    text = ", ".join(f"{status}: {count}" for status, count in good_bad_counts)
+    text2 = ", ".join(f"{reason}: {count}" for reason, count in bad_reason_counts)
+    text += "\nPosture Issues Breakdown: " + text2
+    
+    # AI analysis logic
+    analyzer = GeminiAnalyzer()
+    global gemini_input
+    # Clear gemini_input after use to prepare for next session
+
+    gemini_output = analyzer.generate_report_from_data("Total Count: " + text + "; Chronological Raw Data: " + gemini_input)
+    gemini_input = ""
+    
+    # Write to file
+    with open("instance/analyze.txt", "w") as f:
+        f.write(gemini_output)
+    
+    print("AI Summary Generated.")
+            
+    return jsonify({"status": "summary generated"}), 200
 
 @app.route('/posture_status')
 def posture_status():
