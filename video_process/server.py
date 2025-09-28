@@ -7,6 +7,9 @@ from sqlalchemy import func
 from posture import PostureDetector
 from gemini import GeminiAnalyzer
 
+from dotenv import load_dotenv
+load_dotenv() 
+
 # --- 1. SETUP ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-super-secret-key-for-the-hackathon'
@@ -59,7 +62,7 @@ def start_camera():
 
     with detector_lock:
         if user_id not in detectors:
-            detectors[user_id] = PostureDetector(video_source=0)
+            detectors[user_id] = PostureDetector(video_source=1)
             detectors[user_id].start_processing() # This line starts the camera logic
             print(f"Detector created and started for user {user_id}")
     return jsonify({"status": "started"}), 200
