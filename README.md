@@ -1,4 +1,4 @@
-✨ AlignAI - Your Personal AI Posture Coach
+# ✨ AlignAI - Your Personal AI Posture Coach
 
 AlignAI is a smart web app that uses your webcam to analyze posture in real-time. It acts as a friendly AI companion, giving instant feedback and session summaries to prevent slouching, tech neck, and shoulder strain.
 
