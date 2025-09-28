@@ -6,7 +6,7 @@ import time
 from posture_analyzer import PostureAnalyzer
 
 class PostureDetector:
-    def __init__(self, video_source=0):
+    def __init__(self, video_source=1):
         self.mp_pose = mp.solutions.pose
         self.pose = self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
         self.mp_drawing = mp.solutions.drawing_utils

@@ -9,9 +9,9 @@ class PostureAnalyzer:
     """
     def __init__(self):
         # --- Configuration Thresholds ---
-        self.SLOUCH_THRESHOLD = 15
+        self.SLOUCH_THRESHOLD = 20
         self.HEAD_FORWARD_THRESHOLD = 20
-        self.SHOULDER_TILT_THRESHOLD = 8
+        self.SHOULDER_TILT_THRESHOLD = 9
 
         # --- State Variables ---
         self.calibrated = False
@@ -58,6 +58,15 @@ class PostureAnalyzer:
             nose = landmarks[mp_pose.PoseLandmark.NOSE.value]
             left_ear = landmarks[mp_pose.PoseLandmark.LEFT_EAR.value]
 
+
+            # --- CORRECTED FINAL LOGIC FOR SHOULDER TILT ---
+            current_shoulder_angle = self._calculate_angle(left_shoulder, right_shoulder)
+            shoulder_tilt_diff = current_shoulder_angle - self.baseline_metrics['shoulder_angle']
+            
+            if abs(shoulder_tilt_diff) > self.SHOULDER_TILT_THRESHOLD:
+                # When the user's perceived left shoulder goes down, the angle becomes positive.
+                # When the user's perceived right shoulder goes down, the angle becomes negative.
+                return "BAD", "Shoulder Tilted to Left" if left_shoulder.y - right_shoulder.y < 0 else "Shoulder Tilted to Right"
             # Check for Slouching
             shoulder_midpoint_y = (left_shoulder.y + right_shoulder.y) / 2
             current_vertical_dist = abs(nose.y - shoulder_midpoint_y)
@@ -71,14 +80,6 @@ class PostureAnalyzer:
             if forward_head_percentage > self.HEAD_FORWARD_THRESHOLD:
                 return "BAD", "Forward Head Detected"
 
-            # --- CORRECTED FINAL LOGIC FOR SHOULDER TILT ---
-            current_shoulder_angle = self._calculate_angle(left_shoulder, right_shoulder)
-            shoulder_tilt_diff = current_shoulder_angle - self.baseline_metrics['shoulder_angle']
-            
-            if abs(shoulder_tilt_diff) > self.SHOULDER_TILT_THRESHOLD:
-                # When the user's perceived left shoulder goes down, the angle becomes positive.
-                # When the user's perceived right shoulder goes down, the angle becomes negative.
-                return "BAD", "Shoulder Tilted to Left" if left_shoulder.y - right_shoulder.y < 0 else "Shoulder Tilted to Right"
             
             return "GOOD", "Excellent Posture"
         except Exception:

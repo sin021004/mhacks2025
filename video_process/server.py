@@ -62,7 +62,7 @@ def start_camera():
 
     with detector_lock:
         if user_id not in detectors:
-            detectors[user_id] = PostureDetector(video_source=1)
+            detectors[user_id] = PostureDetector(video_source=0)
             detectors[user_id].start_processing() # This line starts the camera logic
             print(f"Detector created and started for user {user_id}")
     return jsonify({"status": "started"}), 200
@@ -130,6 +130,8 @@ def generate_summary():
         f.write(gemini_output)
     
     print("AI Summary Generated.")
+    db.drop_all()
+    db.create_all()
             
     return jsonify({"status": "summary generated"}), 200
 
