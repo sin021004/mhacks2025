@@ -11,7 +11,7 @@ class PostureAnalyzer:
         # --- Configuration Thresholds ---
         self.SLOUCH_THRESHOLD = 15
         self.HEAD_FORWARD_THRESHOLD = 20
-        self.SHOULDER_TILT_THRESHOLD = 5
+        self.SHOULDER_TILT_THRESHOLD = 8
 
         # --- State Variables ---
         self.calibrated = False
