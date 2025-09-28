@@ -55,10 +55,10 @@ class PostureDetector:
             color = (0, 0, 255) if self.current_posture == "BAD" else (0, 255, 0)
             if not self.analyzer.calibrated: color = (255, 165, 0)
 
-            cv2.rectangle(image, (0, 0), (450, 73), color, -1)
-            cv2.putText(image, f'STATUS: {self.current_posture}', (15, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-            cv2.putText(image, self.posture_reason, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-            self.mp_drawing.draw_landmarks(image, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS)
+            # cv2.rectangle(image, (0, 0), (450, 73), color, -1)
+            # cv2.putText(image, f'STATUS: {self.current_posture}', (15, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+            # cv2.putText(image, self.posture_reason, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            # self.mp_drawing.draw_landmarks(image, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS)
             
             with self.lock:
                 self.latest_frame = image.copy()
