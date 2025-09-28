@@ -70,19 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Function to update the main timers using REAL posture detection
-    // async function updateTimers() {
-    //     totalSeconds++;
-    //     totalTimeDisplay.textContent = formatTime(totalSeconds);
-
-    //     const isGoodPosture = await fetchAndUpdatePostureStatus();
-
-    //     if (isGoodPosture) {
-    //         goodPostureSeconds++;
-    //         goodTimeDisplay.textContent = formatTime(goodPostureSeconds);
-    //     }
-    // }
-
     // Function to start the camera and posture detection via the backend endpoint
     async function initializeCamera() {
         try {
@@ -118,18 +105,33 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateTimers() {
         totalSeconds++;
         totalTimeDisplay.textContent = formatTime(totalSeconds);
-    
+
+        // Get the buddy UI elements
+        const buddyMessageEl = document.getElementById('buddy-message');
+        const buddyFaceEl = document.getElementById('buddy-face');
+        
         try {
             const response = await fetch('/posture_status');
             if (!response.ok) return;
     
             const data = await response.json();
             const isGoodPosture = data.posture === 'GOOD';
+            const postureMessage = data.reason || (isGoodPosture ? 'Perfect Posture!' : 'Adjust Your Posture!');
     
             // Update timers
             if (isGoodPosture) {
                 goodPostureSeconds++;
                 goodTimeDisplay.textContent = formatTime(goodPostureSeconds);
+            }
+
+            // Update buddy UI
+            buddyMessageEl.textContent = postureMessage;
+            if (isGoodPosture) {
+                buddyFaceEl.className = 'buddy-face happy';
+                buddyFaceEl.textContent = '😊'; // Happy Face
+            } else {
+                buddyFaceEl.className = 'buddy-face sad';
+                buddyFaceEl.textContent = '😟'; // Concerned Face
             }
     
             // Update reminder box
