@@ -1,68 +1,92 @@
 import os
+import markdown
+import PIL.Image
 import google.generativeai as genai
+from flask import Flask, render_template, Response, request, jsonify
 
-def get_posture_feedback(angle: float, duration_seconds: int) -> str:
+# --- 1. Flask App and Gemini API Configuration ---
+app = Flask(__name__)
+
+
+# --- 2. Update the PostureAnalyzer Class ---
+class PostureAnalyzer:
     """
-    Generates posture feedback using the Gemini API.
-
-    Args:
-        angle: The user's back posture angle in degrees.
-        duration_seconds: The duration in seconds the posture was held.
-
-    Returns:
-        A string containing AI-generated feedback.
+    Generates posture analysis from a graph image and from raw data.
     """
-    # --- Step 1: Configure the API Key ---
-    # Make sure to set your GEMINI_API_KEY as an environment variable
-    try:
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    except KeyError:
-        return "Error: GEMINI_API_KEY environment variable not set."
+    def __init__(self, model_name="gemini-2.5-flash"):
+        self.model = genai.GenerativeModel(model_name)
 
-    # --- Step 2: Create a detailed prompt for the model ---
-    # This prompt gives the AI a role, context, and clear instructions.
-    prompt = f"""
-    You are an expert posture coach. Your goal is to provide encouraging, actionable feedback.
-    Do not give medical advice.
+    def generate_report_from_image(self, image_path: str) -> str | None:
+        """Generates a report by analyzing a graph image."""
+        try:
+            img = PIL.Image.open(image_path)
+            prompt = ["""You are an expert ergonomist analyzing the attached graph. Provide a detailed analysis based on the visual data presented in the bar chart, explaining the key postural issues and offering an action plan based on the highest percentages shown.""", img]
+            response = self.model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            print(f"Error in generate_report_from_image: {e}")
+            return "An error occurred while analyzing the image."
 
-    A user's back posture was measured. An angle of 90-105 degrees is considered good (upright),
-    while an angle greater than 110 degrees suggests slouching.
+    # ✨ --- NEW METHOD FOR DATA ANALYSIS --- ✨
+    def generate_report_from_data(self, posture_data: dict) -> str | None:
+        """Generates a report by analyzing a dictionary of posture data."""
+        try:
+            # Format the data into a string for the prompt
+            data_string = "\n".join([f"- {key}: {value}%" for key, value in posture_data.items()])
+            
+            prompt = f"""You are an expert ergonomist. Analyze the following posture data, which represents the percentage of time a user exhibited a specific postural issue.
 
-    Here is the user's data:
-    - Posture Angle: {angle:.1f} degrees
-    - Duration: {duration_seconds} seconds
+            **Posture Data:**
+            {data_string}
 
-    Based on this data, provide a short, 2-3 sentence feedback.
-    - If the posture is good, offer encouragement.
-    - If the posture is poor, provide a gentle, corrective suggestion.
+            Please provide a concise analysis focusing on the top 2-3 issues based on the highest percentages. For each, suggest one simple corrective exercise. Maintain an encouraging tone.
+            """
+            response = self.model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            print(f"Error in generate_report_from_data: {e}")
+            return "An error occurred while analyzing the data."
+
+# --- 3. Update the Flask Routes ---
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/report')
+def report():
     """
+    Generates TWO reports (from image and data) and displays them.
+    """
+    analyzer = PostureAnalyzer()
+    
+    # --- Input Data ---
+    image_file_path = os.path.join('static', 'images', 'expenditure-pupil.jpg')
+    # This is the raw data that corresponds to the graph
+    posture_percentages = {
+        "Forward Head": 45,
+        "Shoulder Slouch": 30,
+        "Spinal Slump": 15,
+        "Shoulder Tilt": 10
+    }
+    
+    # --- ✨ GENERATE BOTH REPORTS --- ✨
+    # 1. Generate the report from the image
+    image_report_text = analyzer.generate_report_from_image(image_path=image_file_path)
+    image_report_html = markdown.markdown(image_report_text)
+    
+    # 2. Generate the report from the data dictionary
+    data_report_text = analyzer.generate_report_from_data(posture_data=posture_percentages)
+    data_report_html = markdown.markdown(data_report_text)
+    
+    # --- Render the template, passing BOTH reports ---
+    return render_template(
+        'report.html', 
+        image_report=image_report_html, 
+        data_report=data_report_html
+    )
 
-    # --- Step 3: Call the Gemini API ---
-    try:
-        # Note: 'gemini-1.5-flash-latest' is a valid and current model name.
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"An error occurred while calling the API: {e}"
+# ... (Add your other routes like /video_feed here) ...
 
-
-# --- Main execution block to demonstrate the function ---
-if __name__ == "__main__":
-    print("Running posture feedback examples...\n")
-
-    # Example 1: Good posture (upright)
-    good_posture_angle = 98.5
-    good_posture_duration = 300  # 5 minutes
-    print(f"--- Feedback for Angle: {good_posture_angle}° (Duration: {good_posture_duration}s) ---")
-    feedback1 = get_posture_feedback(good_posture_angle, good_posture_duration)
-    print(feedback1)
-    print("-" * 50)
-
-    # Example 2: Bad posture (slouching)
-    bad_posture_angle = 122.0
-    bad_posture_duration = 600  # 10 minutes
-    print(f"--- Feedback for Angle: {bad_posture_angle}° (Duration: {bad_posture_duration}s) ---")
-    feedback2 = get_posture_feedback(bad_posture_angle, bad_posture_duration)
-    print(feedback2)
-    print("-" * 50)
+if __name__ == '__main__':
+    app.run(debug=True)
