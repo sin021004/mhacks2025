@@ -24,12 +24,12 @@ class GeminiAnalyzer:
             
             
             prompt = f"""You are an expert ergonomist. Analyze the following posture data, which represents the percentage of time a user exhibited a specific postural issue.
-            With the given input (Reasons for Bad postures in Chroonological raw data is in '()'), explain how the posture changes over time and also summarize the overall.
+            With the given input (Reasons for Bad postures in Chroonological raw data is in '()').
 
             **Posture Data:**
             {posture_data}
             
-            Please provide a concise analysis focusing on the top 2-3 issues based on the highest percentages. For each, suggest one simple corrective exercise. Maintain an encouraging tone.
+            Explain how the posture changes over time and summarize the overall in 1 sentence. Tell what problem could arise from a persom's pattern in 1 sentence. Provide how to improve the posture in a daily basis at home in 2 sentences. Format your response in markdown.
             In 100 words.
             """
             response = self.model.generate_content(prompt)
