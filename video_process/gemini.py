@@ -30,6 +30,7 @@ class GeminiAnalyzer:
             {posture_data}
             
             Explain how the posture changes over time and summarize the overall in 1 sentence. Tell what problem could arise from a persom's pattern in 1 sentence. Provide how to improve the posture in a daily basis at home in 2 sentences. Format your response in markdown.
+            Do not write any text in bold.
             In 100 words.
             """
             response = self.model.generate_content(prompt)
