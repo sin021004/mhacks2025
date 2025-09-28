@@ -78,7 +78,7 @@ class PostureAnalyzer:
             if abs(shoulder_tilt_diff) > self.SHOULDER_TILT_THRESHOLD:
                 # When the user's perceived left shoulder goes down, the angle becomes positive.
                 # When the user's perceived right shoulder goes down, the angle becomes negative.
-                return "BAD", "Shoulder Tilted to Left" if shoulder_tilt_diff > 0 else "Shoulder Tilted to Right"
+                return "BAD", "Shoulder Tilted to Left" if left_shoulder.y - right_shoulder.y < 0 else "Shoulder Tilted to Right"
             
             return "GOOD", "Excellent Posture"
         except Exception:
