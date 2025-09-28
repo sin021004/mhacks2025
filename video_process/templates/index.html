@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Add some fun icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script> 
 </head>
 <body>
     <!-- Floating particles background -->
@@ -94,17 +95,6 @@
                     <div class="timer-content">
                         <p class="timer-label">Good Posture Time</p>
                         <span id="good-time" class="timer-value">00:00:00</span>
-                    </div>
-                </div>
-
-                <!-- Real-time Progress -->
-                <div class="progress-card">
-                    <div class="progress-header">
-                        <span>Current Session Progress</span>
-                        <span id="progress-percentage">0%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div id="progress-fill" class="progress-fill"></div>
                     </div>
                 </div>
             </div>
@@ -198,6 +188,16 @@
                             <strong class="improvement">+5%</strong>
                         </div>
                     </div>
+                </div>
+
+                <div class="chart-section">
+                    <h3>Posture Breakdown</h3>
+                    <canvas id="posture-breakdown-chart"></canvas>
+                </div>
+
+                <div class="chart-section">
+                    <h3>Percentage of Good Posture Over Time</h3>
+                    <canvas id="posture-over-time-chart"></canvas>
                 </div>
 
                 <div class="feedback-section">

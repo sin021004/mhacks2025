@@ -18,6 +18,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let isRunning = false;
     let totalTimer;
 
+    // Chart Variables
+    let breakdownChart = null;
+    let overTimeChart = null;
+
+    let postureReasons = {
+        "Shoulder Tilted to Left": 0,
+        "Shoulder Tilted to Right": 0,
+        "Forward Head Detected": 0,
+        "Slouch Detected": 0,
+    };
+
+    let timestamps = [];
+    let goodPercentages = [];
+
     // Helper function to format seconds into HH:MM:SS
     function formatTime(seconds) {
         const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
@@ -57,17 +71,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Function to update the main timers using REAL posture detection
-    async function updateTimers() {
-        totalSeconds++;
-        totalTimeDisplay.textContent = formatTime(totalSeconds);
+    // async function updateTimers() {
+    //     totalSeconds++;
+    //     totalTimeDisplay.textContent = formatTime(totalSeconds);
 
-        const isGoodPosture = await fetchAndUpdatePostureStatus();
+    //     const isGoodPosture = await fetchAndUpdatePostureStatus();
 
-        if (isGoodPosture) {
-            goodPostureSeconds++;
-            goodTimeDisplay.textContent = formatTime(goodPostureSeconds);
-        }
-    }
+    //     if (isGoodPosture) {
+    //         goodPostureSeconds++;
+    //         goodTimeDisplay.textContent = formatTime(goodPostureSeconds);
+    //     }
+    // }
 
     // Function to start the camera and posture detection via the backend endpoint
     async function initializeCamera() {
@@ -100,6 +114,43 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error stopping camera:', error);
         }
     }
+
+    async function updateTimers() {
+        totalSeconds++;
+        totalTimeDisplay.textContent = formatTime(totalSeconds);
+    
+        try {
+            const response = await fetch('/posture_status');
+            if (!response.ok) return;
+    
+            const data = await response.json();
+            const isGoodPosture = data.posture === 'GOOD';
+    
+            // Update timers
+            if (isGoodPosture) {
+                goodPostureSeconds++;
+                goodTimeDisplay.textContent = formatTime(goodPostureSeconds);
+            }
+    
+            // Update reminder box
+            reminderBox.className = isGoodPosture ? 'reminder good-posture' : 'reminder bad-posture';
+            reminderBox.innerHTML = `Current Status: <strong>${isGoodPosture ? 'Perfect Posture!' : 'Adjust Your Posture!'}</strong>`;
+    
+            // Update posture reason counts
+            if (data.reason && postureReasons.hasOwnProperty(data.reason)) {
+                postureReasons[data.reason]++;
+            }
+    
+            // Update Line Chart Data (for end analysis)
+            const percentage = totalSeconds > 0 ? (goodPostureSeconds / totalSeconds) * 100 : 0;
+            timestamps.push(totalSeconds);
+            goodPercentages.push(percentage.toFixed(1));
+    
+        } catch (err) {
+            console.error("Error fetching posture status:", err);
+        }
+    }
+       
     // --- BUTTON HANDLERS WITH CAMERA CONTROL INTEGRATION ---
 
     startBtn.addEventListener('click', async () => {
@@ -146,20 +197,36 @@ document.addEventListener('DOMContentLoaded', () => {
      
 
     // PAUSE Button Handler (modified to use the prettier resume/pause logic)
-    pauseBtn.addEventListener('click', () => {
+    // PAUSE Button Handler (modified to use the prettier resume/pause logic)
+    pauseBtn.addEventListener('click', async () => { // **NOTE: Made function async**
         if (isRunning) {
             // PAUSE LOGIC
             isRunning = false;
             clearInterval(totalTimer);
             pauseBtn.textContent = 'RESUME';
-            // Optional: You might want to call a /pause_detection endpoint here
+            
+            // 1. Send signal to backend to stop processing/stream
+            await stopCamera(); 
+            
+            // 2. Change video feed to static placeholder
+            videoFeed.src = placeholderSrc; 
+            
             reminderBox.className = 'reminder good-posture';
             reminderBox.innerHTML = 'Current Status: <strong>Session Paused</strong>';
+            
         } else {
             // RESUME LOGIC
+            
+            // 1. Start camera/detection *before* starting the timer
+            const cameraStarted = await initializeCamera();
+            if (!cameraStarted) return;
+            videoFeed.src = '/video_feed';
+
+            // 2. Start session timers
             isRunning = true;
             totalTimer = setInterval(updateTimers, 1000);
             pauseBtn.textContent = 'PAUSE';
+            
             // The next updateTimers call will refresh the reminderBox status
         }
     });
@@ -191,6 +258,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('final-good-time').textContent = formatTime(goodPostureSeconds);
         document.getElementById('posture-percentage').textContent = `${goodPercentage}%`;
 
+        const statCircle = document.querySelector('.analysis-stats .stat-circle');
+        if (statCircle) {
+            // The CSS variable --percentage controls the conic-gradient fill.
+            // We use the raw number (not with a '%' or 'deg' unit) here.
+            statCircle.style.setProperty('--percentage', goodPercentage);
+}
+
         // ... (your excellent feedback message logic) ...
         const feedbackMessage = document.querySelector('.feedback-message');
         if (goodPercentage >= 80) {
@@ -204,7 +278,55 @@ document.addEventListener('DOMContentLoaded', () => {
             feedbackMessage.style.color = 'var(--danger-color)';
         }
 
+        // --- CHART FIX: Make modal visible BEFORE initializing charts ---
         analysisSection.classList.remove('hidden');
+
+        // --- NEW: Initialize Charts HERE ---
+        
+        // PIE CHART: Posture Breakdown
+        const breakdownCtx = document.getElementById('posture-breakdown-chart').getContext('2d');
+        
+        // Destroy previous instance to avoid error if END is pressed multiple times
+        if (breakdownChart) breakdownChart.destroy(); 
+
+        breakdownChart = new Chart(breakdownCtx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(postureReasons),
+                datasets: [{
+                    data: Object.values(postureReasons),
+                    backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#FF8C00']
+                }]
+            }
+        });
+
+        // LINE CHART: Posture Over Time
+        const overTimeCtx = document.getElementById('posture-over-time-chart').getContext('2d');
+
+        // Destroy previous instance to avoid error if END is pressed multiple times
+        if (overTimeChart) overTimeChart.destroy(); 
+        
+        overTimeChart = new Chart(overTimeCtx, {
+            type: 'line',
+            data: {
+                labels: timestamps,
+                datasets: [{
+                    label: '% Good Posture',
+                    data: goodPercentages,
+                    borderColor: '#36A2EB',
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: { 
+                scales: { 
+                    y: { min: 0, max: 100, title: { display: true, text: 'Percentage (%)' } },
+                    x: { title: { display: true, text: 'Time (s)' } }
+                },
+                maintainAspectRatio: false // Important for modals
+            }
+        });
+        // --- END: Initialize Charts HERE ---
 
         // 6. Reset session variables
         totalSeconds = 0;
@@ -213,6 +335,17 @@ document.addEventListener('DOMContentLoaded', () => {
         goodTimeDisplay.textContent = formatTime(0);
         reminderBox.className = 'reminder';
         reminderBox.innerHTML = 'Current Status: <strong>Ready to Start</strong>';
+        postureReasons = {
+            "Shoulder Tilted to Left": 0,
+            "Shoulder Tilted to Right": 0,
+            "Forward Head Detected": 0,
+            "Slouch Detected": 0,
+        };
+        timestamps = [];
+        goodPercentages = [];
+        
+        // NOTE: The next time the end button is pressed, the charts will be destroyed
+        // and recreated with the new data, so no need to explicitly update/reset them here.
     });
 
     // Optional: Initial status check on page load

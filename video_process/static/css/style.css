@@ -388,39 +388,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-/* Progress Card */
-.progress-card {
-    background: var(--bg-white);
-    padding: 20px;
-    border-radius: var(--border-radius-sm);
-    box-shadow: var(--shadow-soft);
-}
-
-.progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    font-size: 0.9rem;
-    color: var(--text-light);
-}
-
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: #e9ecef;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: var(--success-gradient);
-    border-radius: 10px;
-    transition: width 0.5s ease;
-    width: 0%;
-}
-
 /* Buttons */
 .button-group {
     display: flex;
@@ -683,6 +650,54 @@ body {
     padding-bottom: 10px;
     border-bottom: 1px solid #eee;
 }
+
+.chart-section {
+    /* Adds spacing above and below each chart */
+    margin-top: 20px;
+    margin-bottom: 30px; 
+    /* Centers the title and potentially the chart itself */
+    text-align: center; 
+    /* Ensures the section takes up the full width available */
+    width: 100%;
+    /* Adds a light divider line */
+    border-top: 1px solid #eee; 
+    padding-top: 20px;
+}
+
+/* Styling for the chart titles */
+.chart-section h3 {
+    font-size: 1.2em;
+    color: #333;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+/* Target the canvas elements inside the chart section */
+.chart-section canvas {
+    /* Max height to vertically constrain the chart */
+    max-height: 300px; /* Adjust this value (e.g., 250px to 400px) */
+    width: 100% !important; /* Ensure it still fills the horizontal space */
+    height: 100% !important; /* Ensure it respects the parent's height */
+}
+
+/* Styling for the canvas elements (where the charts are drawn) */
+/* This is crucial for controlling the size and aspect ratio of the charts */
+#posture-breakdown-chart {
+    /* Set a max width to prevent the pie chart from getting too large on big screens */
+    max-width: 400px; 
+    /* Centers the chart horizontally within its container */
+    margin: 0 auto; 
+    display: block;
+}
+
+#posture-over-time-chart {
+    /* Allows the line graph to use most of the modal's width */
+    max-width: 90%; 
+    height: 300px; /* Define a fixed height for the line graph */
+    margin: 0 auto;
+    display: block;
+}
+
 
 .improvement {
     color: var(--success-color);
